@@ -10,8 +10,19 @@ import {
 } from "firebase/firestore";
 import { db, storage } from "@/firebase_config";
 
+type PriceContextType = {
+  lists: any[];
+  setLists: (value: any[]) => void;
+  rates: any[];
+  setRates: (value: any[]) => void;
+};
 // create price context
-export const PriceContext = createContext();
+export const PriceContext = createContext<PriceContextType>({
+  lists: [],
+  setLists: () => {},
+  rates: [],
+  setRates: () => {},
+});
 
 const PriceProvider = ({ children }) => {
   const [lists, setLists] = useState<any>([]);
