@@ -3,5 +3,8 @@
 .pnp.cjs
 .pnp.loader.mjs
 yarn.lock
-node_modules/
+node_modules
+package-lock.json
+.env
+.env.prod
 .env.local

@@ -10,23 +10,39 @@ import {
 } from "firebase/firestore";
 import { db, storage } from "@/firebase_config";
 
-type PriceContextType = {
-  lists: any[];
-  setLists: (value: any[]) => void;
-  rates: any[];
-  setRates: (value: any[]) => void;
-};
 // create price context
-export const PriceContext = createContext<PriceContextType>({
-  lists: [],
-  setLists: () => {},
-  rates: [],
-  setRates: () => {},
-});
+export const PriceContext = createContext();
 
 const PriceProvider = ({ children }) => {
   const [lists, setLists] = useState<any>([]);
   const [rates, setRates] = useState<any>([]);
+  const [velocity, setVelocity] = useState({
+    distance_from: "",
+    distance_to: "",
+    rate: "",
+  });
+
+  useEffect(() => {
+    getRates();
+  }, []);
+
+  async function addRate() {
+    // e.preventDefault();
+
+    await addDoc(collection(db, "rates"), {
+      distance_from: velocity.distance_from,
+      distance_to: velocity.distance_to,
+      rate: velocity.rate,
+    });
+
+    setVelocity((prev) => {
+      let item = { ...prev };
+      item["distance_from"] = "";
+      item["distance_to"] = "";
+      item["rate"] = "";
+      return item;
+    });
+  }
 
   function getRates() {
     onSnapshot(collection(db, "rates"), (snapshot) => {
@@ -37,12 +53,24 @@ const PriceProvider = ({ children }) => {
     });
   }
 
-  useEffect(() => {
-    getRates();
-  }, []);
+  // delete rate in firebase
+  const deleteRate = async (id) => {
+    await deleteDoc(doc(db, "rates", id));
+  };
 
   return (
-    <PriceContext.Provider value={{ lists, setLists, rates, setRates }}>
+    <PriceContext.Provider
+      value={{
+        lists,
+        setLists,
+        rates,
+        setRates,
+        velocity,
+        setVelocity,
+        addRate,
+        deleteRate,
+      }}
+    >
       {children}
     </PriceContext.Provider>
   );

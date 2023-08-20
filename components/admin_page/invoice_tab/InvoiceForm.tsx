@@ -11,6 +11,7 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  updateDoc,
 } from "firebase/firestore";
 import { db, storage } from "@/firebase_config";
 import { PriceContext } from "@/context/PriceContext";
@@ -28,17 +29,27 @@ const InvoiceForm = ({ toTab }: any) => {
   const [invoiceNumber, setInvoiceNumber] = useState(1);
   const [telahTerimaDari, setTelahTerimaDari] = useState("");
   const [order, setOrder] = useState("");
+  const [resHarga, setResHarga] = useState(0);
+  const [resBerat, setResBerat] = useState(0);
   const [uangSejumlah, setUangSejumlah] = useState("");
   const [lastItem, setLastItem] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [titikAwal, setTitikAwal] = useState<any>({});
+  const [titikAkhir, setTitikAkhir] = useState<any>({});
+  const [kota_A, setKota_A] = useState("");
+  const [kota_B, setKota_B] = useState("");
+  const [cost, setCost] = useState(0);
   const [items, setItems] = useState([
     {
       id: uid(6),
       uraian: "",
       qty: 1,
       jenisTruk: "CDD",
-      kota: "Jakarta - Bandung",
-      jarakKota: 0,
+      // kota: "Jakarta - Bandung",
+      lokasi_awal: "",
+      lokasi_akhir: "",
+      rate: 0,
+      // jarakKota: 0,
       qtyBags: 0,
       kg: 0,
       harga: 0,
@@ -46,41 +57,60 @@ const InvoiceForm = ({ toTab }: any) => {
     },
   ]);
 
-  // console.log(lists);
+  // console.log(items);
 
   const createInvoiceHandler = async (event: any) => {
     event.preventDefault();
     setLoading(true);
     setTimeout(async () => {
-      // event.preventDefault();
       if (items.length < 2 || lastItem) {
-        const inv = await addDoc(collection(db, "invoices"), {
-          // idOrder: dataOrder.id,
+        let dataOrder = {};
+        if (!order && !lastItem) {
+          dataOrder = await addDoc(collection(db, "orders"), {
+            telah_terima_dari: telahTerimaDari,
+            invoiceDate: today,
+            totalPrice: total,
+            telah_dibayar: uangSejumlah,
+            invoiceNumber: invoiceNumber,
+            jenis_truk: items[items.length - 1].jenisTruk,
+            // kota: items[items.length - 1].kota,
+            lokasi_awal: items[items.length - 1].lokasi_awal,
+            lokasi_akhir: items[items.length - 1].lokasi_akhir,
+            rate: items[items.length - 1].rate,
+            totalBerat: totalBerat,
+            status: "PENDING",
+            platKendaraan: "",
+            supir: "",
+          });
+          setResHarga(resHarga + items[items.length - 1].harga);
+          setResBerat(+resBerat + Number(items[items.length - 1].kg));
+        }
+
+        await addDoc(collection(db, "invoices"), {
+          idOrder: order ?? dataOrder.id,
           invoiceNumber: invoiceNumber,
           uraian: items[items.length - 1].uraian,
           jenisTruk: items[items.length - 1].jenisTruk,
-          kota: items[items.length - 1].kota,
+          // kota: items[items.length - 1].kota,
+          lokasi_awal: items[items.length - 1].lokasi_awal,
+          lokasi_akhir: items[items.length - 1].lokasi_akhir,
+          rate: items[items.length - 1].rate,
           kg: items[items.length - 1].kg,
-          jarakKota: items[items.length - 1].jarakKota,
+          // jarakKota: items[items.length - 1].jarakKota,
           qtyBags: items[items.length - 1].qtyBags,
           harga: items[items.length - 1].harga,
           keterangan: items[items.length - 1].keterangan,
         });
-        await addDoc(collection(db, "orders"), {
-          telah_terima_dari: telahTerimaDari,
-          uidInv: order ? order : inv.id,
-          invoiceDate: today,
-          totalPrice: total,
-          telah_dibayar: uangSejumlah,
-          invoiceNumber: invoiceNumber,
-          jenis_truk: items[items.length - 1].jenisTruk,
-          kota: items[items.length - 1].kota,
-          totalBerat: totalBerat,
-          status: "PENDING",
-          platKendaraan: "",
-          supir: "",
-        });
-        // setOrder(dataOrder.id);
+
+        setResHarga(resHarga + items[items.length - 1].harga);
+        setResBerat(+resBerat + Number(items[items.length - 1].kg));
+
+        if (order) {
+          await updateDoc(doc(db, "orders", order), {
+            totalPrice: resHarga + items[items.length - 1].harga,
+            totalBerat: +resBerat + Number(items[items.length - 1].kg),
+          });
+        }
       } else {
         toTab(1);
       }
@@ -89,39 +119,71 @@ const InvoiceForm = ({ toTab }: any) => {
     }, 3000);
   };
 
-  const addNextInvoiceHandler = () => {
-    setInvoiceNumber((prevNumber) => prevNumber);
-    setItems([
-      {
-        id: uid(6),
-        uraian: "",
-        qty: 1,
-        jenisTruk: "CDD",
-        kota: "Jakarta - Bandung",
-        jarakKota: 0,
-        qtyBags: 0,
-        kg: 0,
-        harga: 0,
-        keterangan: "",
-      },
-    ]);
-  };
+  // const addNextInvoiceHandler = () => {
+  //   setInvoiceNumber((prevNumber) => prevNumber);
+  //   setItems([
+  //     {
+  //       id: uid(6),
+  //       uraian: "",
+  //       qty: 1,
+  //       jenisTruk: "CDD",
+  //       kota: "Jakarta - Bandung",
+  //       jarakKota: 0,
+  //       qtyBags: 0,
+  //       kg: 0,
+  //       harga: 0,
+  //       keterangan: "",
+  //     },
+  //   ]);
+  // };
 
-  const addItemHandler = async () => {
+  const addItemHandler = async (e) => {
+    e.preventDefault();
     // const id = uid(6);
     setLastItem(true);
-    const inv = await addDoc(collection(db, "invoices"), {
+    let dataOrder = {};
+    // let totHarga = 0
+    // console.log(typeof order);
+    if (!order) {
+      dataOrder = await addDoc(collection(db, "orders"), {
+        telah_terima_dari: telahTerimaDari,
+        // uidInv: order ? order : inv.id,
+        invoiceDate: today,
+        totalPrice: total,
+        telah_dibayar: uangSejumlah,
+        invoiceNumber: invoiceNumber,
+        jenis_truk: items[items.length - 1].jenisTruk,
+        // kota: items[items.length - 1].kota,
+        lokasi_awal: items[items.length - 1].lokasi_awal,
+        lokasi_akhir: items[items.length - 1].lokasi_akhir,
+        rate: items[items.length - 1].rate,
+        totalBerat: totalBerat,
+        status: "PENDING",
+        platKendaraan: "",
+        supir: "",
+      });
+      setOrder(dataOrder.id);
+    }
+
+    await addDoc(collection(db, "invoices"), {
       invoiceNumber: invoiceNumber,
+      idOrder: !order ? dataOrder.id : order,
       uraian: items[items.length - 1].uraian,
       jenisTruk: items[items.length - 1].jenisTruk,
-      kota: items[items.length - 1].kota,
+      // kota: items[items.length - 1].kota,
+      lokasi_awal: items[items.length - 1].lokasi_awal,
+      lokasi_akhir: items[items.length - 1].lokasi_akhir,
+      rate: items[items.length - 1].rate,
       kg: items[items.length - 1].kg,
-      jarakKota: items[items.length - 1].jarakKota,
+      // jarakKota: items[items.length - 1].jarakKota,
       qtyBags: items[items.length - 1].qtyBags,
       harga: items[items.length - 1].harga,
       keterangan: items[items.length - 1].keterangan,
     });
-    setOrder(inv.id);
+
+    setResHarga(resHarga + items[items.length - 1].harga);
+    setResBerat(+resBerat + Number(items[items.length - 1].kg));
+
     setItems((prevItem) => [
       ...prevItem,
       {
@@ -129,8 +191,11 @@ const InvoiceForm = ({ toTab }: any) => {
         uraian: "",
         qty: 1,
         jenisTruk: "CDD",
-        kota: "Jakarta - Bandung",
-        jarakKota: 0,
+        // kota: "Jakarta - Bandung",
+        lokasi_awal: "",
+        lokasi_akhir: "",
+        rate: 0,
+        // jarakKota: 0,
         qtyBags: 0,
         kg: 0,
         harga: 0,
@@ -149,12 +214,15 @@ const InvoiceForm = ({ toTab }: any) => {
       name: event.target.name,
       value: event.target.value,
     };
-
     const newItems = items.map((items: any) => {
       for (const key in items) {
         if (key === editedItem.name && items.id === editedItem.id) {
           items[key] = editedItem.value;
-          items["harga"] = calculatePrice(items["kg"], items["jarakKota"]);
+          items["lokasi_awal"] = kota_A;
+          items["lokasi_akhir"] = kota_B;
+          items["rate"] = cost;
+          // items["harga"] = calculatePrice(+items["kg"], +items["jarakKota"]);
+          items["harga"] = calculatePrice(+items["kg"]);
         }
       }
       return items;
@@ -163,16 +231,23 @@ const InvoiceForm = ({ toTab }: any) => {
     setItems(newItems);
   };
 
-  const calculatePrice = (bebanMuatan: number, distance: number) => {
+  const calculatePrice = (bebanMuatan: number) => {
     let price = 0;
+    let distance = calculateDistance(
+      titikAwal.lat,
+      titikAwal.lng,
+      titikAkhir.lat,
+      titikAkhir.lng
+    );
     lists.map((rate) => {
       for (const key in rate) {
         if (
           rate.id == rate[key] &&
-          rate["distance_to"] > distance &&
-          distance > rate["distance_from"]
+          rate["distance_to"] >= distance &&
+          distance >= rate["distance_from"]
         ) {
-          price = bebanMuatan * rate["rate"];
+          setCost(Number(rate["rate"]));
+          price = Number(bebanMuatan) * Number(rate["rate"]);
         }
       }
     });
@@ -200,6 +275,55 @@ const InvoiceForm = ({ toTab }: any) => {
 
     // return rate * bebanMuatan;
   };
+
+  function calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) {
+    const earthRadius = 6371; // in kilometers
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = earthRadius * c;
+
+    return distance;
+  }
+
+  function toRadians(degrees: number) {
+    return degrees * (Math.PI / 180);
+  }
+
+  const titikAwalHandler = (place: any) => {
+    if (place) {
+      setKota_A(place.formatted_address);
+      setTitikAwal({
+        lat: Number(place.geometry.location.lat()),
+        lng: Number(place.geometry.location.lng()),
+      });
+    }
+  };
+
+  const titikAkhirHandler = (place: any) => {
+    if (place) {
+      setKota_B(place.formatted_address);
+      setTitikAkhir({
+        lat: Number(place.geometry.location.lat()),
+        lng: Number(place.geometry.location.lng()),
+      });
+    }
+  };
+
+  // console.log(kota_A, kota_B);
 
   const total = items.reduce((total, num) => {
     return total + Number(num.harga);
@@ -238,7 +362,7 @@ const InvoiceForm = ({ toTab }: any) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="text-sm font-bold sm:text-base w-[150px]">
+            <div className="text-sm font-bold sm:text-base w-[155px]">
               Telah Terima Dari :
             </div>
             <TextField
@@ -276,8 +400,10 @@ const InvoiceForm = ({ toTab }: any) => {
                   <th>No</th>
                   <th>Uraian</th>
                   <th>Jenis Truk</th>
-                  <th>Kota</th>
-                  <th>Jarak ( Dalam KM )</th>
+                  {/* <th>Kota</th> */}
+                  <th>Lokasi Awal</th>
+                  <th>Lokasi Akhir</th>
+                  {/* <th>Jarak ( Dalam KM )</th> */}
                   <th>QTY Bags</th>
                   <th>Kg</th>
                   <th>Harga</th>
@@ -293,8 +419,11 @@ const InvoiceForm = ({ toTab }: any) => {
                     id={item.id}
                     uraian={item.uraian}
                     jenisTruk={item.jenisTruk}
-                    kota={item.kota}
-                    jarakKota={item.jarakKota}
+                    // kota={item.kota}
+                    titikAwal={titikAwalHandler}
+                    titikAkhir={titikAkhirHandler}
+                    lokasi_awal={item.lokasi_awal}
+                    lokasi_akhir={item.lokasi_akhir}
                     qtyBags={item.qtyBags}
                     kg={item.kg}
                     harga={item.harga}
@@ -334,7 +463,7 @@ const InvoiceForm = ({ toTab }: any) => {
           </Button>
         </div>
 
-        <div>
+        {/* <div>
           <InvoiceModal
             toTab={toTab}
             isOpen={isOpen}
@@ -348,7 +477,7 @@ const InvoiceForm = ({ toTab }: any) => {
             items={items}
             onAddNextInvoice={addNextInvoiceHandler}
           />
-        </div>
+        </div> */}
       </form>
     </div>
   );

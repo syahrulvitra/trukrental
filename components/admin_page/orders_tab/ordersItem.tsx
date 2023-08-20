@@ -23,9 +23,11 @@ import {
 import { db, storage } from "@/firebase_config";
 import InvoiceField from "../invoice_tab/InvoiceField";
 import PrintInvoice from "./invoicePrint";
+import Swal from "sweetalert2";
 
 export default function OrdersItem() {
   const [data, setData] = useState<any>([]);
+  const [invoices, setInvoices] = useState<any>([]);
   const [lists, setLists] = useState<any>({});
   const [invoice, setInvoice] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -39,8 +41,17 @@ export default function OrdersItem() {
     });
   };
 
+  const getInvoices = () => {
+    onSnapshot(collection(db, "invoices"), (snapshot) => {
+      let items: any = [];
+      snapshot.docs.map((x: any) => items.push({ ...x.data(), id: x.id }));
+      setInvoices(items);
+    });
+  };
+
   useEffect(() => {
     getData();
+    getInvoices();
   }, []);
 
   const openModalPrint = (event: any, item: any) => {
@@ -65,12 +76,32 @@ export default function OrdersItem() {
 
   // delete order in firebase
   const deleteItem = (item) => {
-    setLoading(true);
-    setTimeout(async () => {
-      await deleteDoc(doc(db, "orders", item.id));
-      await deleteDoc(doc(db, "invoices", item.uidInv));
-      setLoading(false);
-    }, 2000);
+    Swal.fire({
+      title: "Apakah kamu yakin!",
+      text: "Ingin menghapus order ini?",
+      showCancelButton: true,
+      cancelButtonText: "Batal",
+      confirmButtonText: "Yaa",
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+    }).then((result) => {
+      /* Read more about isConfirmed, isDenied below */
+      if (result.isConfirmed) {
+        setLoading(true);
+        setTimeout(async () => {
+          await deleteDoc(doc(db, "orders", item.id));
+          invoices
+            .filter((items) => items.idOrder === item.id)
+            .forEach(async (el) => {
+              await deleteDoc(doc(db, "invoices", el.id));
+            });
+          setLoading(false);
+          Swal.fire("Terhapus!", "", "success");
+        }, 2000);
+      } else if (result.isDismissed) {
+        Swal.fire("Terima kasih!", "", "info");
+      }
+    });
   };
 
   const edtiItemHandler = (event: any) => {
@@ -103,7 +134,9 @@ export default function OrdersItem() {
             <th>No</th>
             <th>Tanggal Invoice</th>
             <th>Invoice Number</th>
-            <th>Kota</th>
+            {/* <th>Lokasi Awal</th>
+            <th>Lokasi Akhir</th>
+            <th>Rate</th> */}
             <th>Total Berat</th>
             <th>Total Harga</th>
             <th>Terima Dari</th>
@@ -122,12 +155,14 @@ export default function OrdersItem() {
         <tbody>
           {data.map((item, index) => (
             <>
-              <tr key={index}>
+              <tr key={item.id}>
                 <td>{index + 1}</td>
                 <td>{item.invoiceDate}</td>
                 <td>{item.invoiceNumber}</td>
-                <td>{item.kota}</td>
-                <td>{item.totalBerat}</td>
+                {/* <td>{item.lokasi_awal.slice(0, 22).concat("...")}</td>
+                <td>{item.lokasi_akhir.slice(0, 22).concat("...")}</td>
+                <td>{item.rate}</td> */}
+                <td>{item.totalBerat} Kg</td>
                 <td>
                   <div>
                     Rp.{" "}
@@ -213,7 +248,6 @@ export default function OrdersItem() {
         setIsOpen={setIsOpen}
         invoiceInfo={{
           invoiceNumber: lists.invoiceNumber,
-          total: lists.totalPrice,
           telahTerimaDari: lists.telah_terima_dari,
           uangSejumlah: lists.telah_dibayar,
         }}
