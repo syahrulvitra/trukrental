@@ -162,7 +162,7 @@ const InvoiceForm = ({ toTab }: any) => {
         telah_dibayar: uangSejumlah,
         invoiceNumber: invoiceNumber,
         jenis_truk: items[items.length - 1].jenisTruk,
-        // kota: items[items.length - 1].kota,
+
         lokasi_awal: items[items.length - 1].lokasi_awal,
         lokasi_akhir: items[items.length - 1].lokasi_akhir,
         rate: items[items.length - 1].rate,
@@ -468,7 +468,7 @@ const InvoiceForm = ({ toTab }: any) => {
             className="bg-primary"
             sx={{ color: "white" }}
           >
-            {loading ? `loading...` : `Buat Invoice`}
+            {loading ? `loading...` : `Buat Order`}
           </Button>
         </div>
 

@@ -72,7 +72,7 @@ export default function AdminTab() {
                 <Box sx={{ width: "100%" }}>
                     <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
                         <Tabs value={value} onChange={handleChange}>
-                            <Tab label="Form Invoice" {...a11yProps(0)} />
+                            <Tab label="Form Order" {...a11yProps(0)} />
                             {/* <Tab label="Tambah Jasa Sewa" {...a11yProps(1)} /> */}
                             <Tab label="Daftar Order" {...a11yProps(1)} />
                             <Tab label="Daftar Harga" {...a11yProps(2)} />
